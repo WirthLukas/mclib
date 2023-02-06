@@ -1,6 +1,6 @@
 # mclib
 
-A new std library for the C language with many modern C approaches.
+An extending C standard library with more modern approaches
 
 * Single Header Files (SHF)
 * Error Handling
