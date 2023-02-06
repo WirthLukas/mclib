@@ -1,4 +1,4 @@
-# MCLIB
+# mclib
 
 A new std library for the C language with many modern C approaches.
 
@@ -6,9 +6,16 @@ A new std library for the C language with many modern C approaches.
 * Error Handling
 * Allocation Aware
 
+## Installation
+
+Copy the mclib folder into your project and you can use every header file.
+A more detailed description will come soon...
+
 ## Features
 
 ### Dynamic Arrays (dynarray)
+
+Find out more in the [documentation](docs/DynamicArray.md)
 
 ```c
     #define MCLIB_DYNARRAY_IMPLEMENTATION
@@ -17,11 +24,11 @@ A new std library for the C language with many modern C approaches.
     // or simple int* ints = .....
     dyn_array_t(int) ints = dyn_array_init(params(int, 10, 20, 30));
 
-    dyn_array_add_many((void **) &ints, params(int, 40, 50, 60, 70, 80, 90));
+    dyn_array_add_many(&ints, params(int, 40, 50, 60, 70, 80, 90));
 
     int value = 45;
-    dyn_array_insert_one_at((void **) &ints, 4, &value);
-    dyn_array_insert_many_at((void **) &ints, 4, params(int, 42, 44, 46, 48));
+    dyn_array_insert_one_at(&ints, 4, &value);
+    dyn_array_insert_many_at(&ints, 4, params(int, 42, 44, 46, 48));
     
     for   (int i = 0; i < dyn_array_length(ints); i++) {
         printf("%d ", ints[i]);
@@ -29,7 +36,7 @@ A new std library for the C language with many modern C approaches.
     
     printf("\n");
 
-    dyn_array_delete((void **) &ints);
+    dyn_array_delete(&ints);
 ```
 
 ### Variadic Parameters with automatic length calculation
@@ -99,6 +106,10 @@ int main() {
     run_tests(dyn_array_suite);
 }
 ```
+
+## Example Projects
+
+...can be found in the [examples folder](examples).
 
 ## Contribute
 
