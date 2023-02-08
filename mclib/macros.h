@@ -20,21 +20,21 @@
 #define concat(x,y) concat_helper(x,y)
 #define macro_var(name) concat(name, __LINE__)
 
+#define string_cat(str1, str2) (str1 "" str2)
+
 // https://www.youtube.com/watch?v=QpAhX-gsHMs
-#define defer(start, end) for (      \
-    int macro_var(_i_) = ((start), 0); \
-    !macro_var(_i_);                 \
-    (macro_var(_i_) += 1), (end))      \
+#define defer(start, end) for (         \
+    int macro_var(_i_) = ((start), 0);  \
+    !macro_var(_i_);                    \
+    (macro_var(_i_) += 1), (end))       \
 
 #define scope(end) defer(0, end)
 
-//#define using(ptr) scope(free(ptr))
-
-#define foreach(item, array) \
+#define foreach(item, array)                                            \
     for (int keep = 1, count = 0, size = sizeof(array)/sizeof *(array); \
-    keep && count != size;   \
-    keep = !keep, count++)   \
-        for (item = (array)+count; keep; keep = !keep) \
+    keep && count != size;                                              \
+    keep = !keep, count++)                                              \
+        for (item = (array)+count; keep; keep = !keep)                  \
 
 
 // This requires nested functions to be allowed.

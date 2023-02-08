@@ -2,7 +2,7 @@
 
 An extending C standard library with more modern approaches
 
-* Single Header Files (SHF)
+* Single Header Files (SHF) (find out more about that in this blog: https://nicolashollmann.de/blog/single-header-libraries/)
 * Error Handling
 * Allocation Aware
 
@@ -58,14 +58,14 @@ void main() {
 }
 ```
 
-### Linear Allocator
+### Linear Allocator / Arenas
 
 ```c
 const int cap = 300;
 void* memory = malloc(cap);
-allocator_t allocator = allocator_new(cap, memory);
+allocator_t arena = allocator_new(cap, memory);
 
-person_t* p = allocator_get(&allocator, sizeof(person_t) * 1);
+person_t* p = allocator_get(&arena, sizeof(person_t) * 1);
 ```
 
 ### String Builder
@@ -107,13 +107,52 @@ int main() {
 }
 ```
 
+### Macros and Language "Extensions"
+
+Find out more in the [documentation](docs/Macros.md)
+
+```c
+// gets automatically freed at the end of the scope
+using int* ptr = smart_alloc(sizeof(int), &dtor);
+
+/// ---------------------------------------------
+
+const int cap = 300;
+void* memory = malloc(cap);
+allocator_t allocator = allocator_new(cap, memory);
+
+// automatically calls allocator_delete and free after the source code inside scope has executed
+scope((allocator_delete(&allocator), free(memory))) {
+    printf("String Builer\n=================\n");
+    string_builder_t* builder = string_builder_new(10, linear_allocator_allocation_strategy(&allocator));
+    
+    using_string_builder(builder) {
+        string_builder_add_string(builder, "Hello ", 0);
+        string_builder_add_string(builder, "Darkness my old Friend", 0);
+        
+        size_t builder_length = string_builder_length(builder);
+        STRING_BUILDER_STRING(text, builder);
+        string_builder_to_string(builder, text, builder_length);
+        println("String: %s", text);
+        printf("Length: %ld\n", strlen(text));
+    }
+}
+
+// ---------------------
+
+int a;
+scanf("%d", refof a);
+int p = refof a;
+printf("&d\n", valof p);
+```
+
 ## Example Projects
 
 ...can be found in the [examples folder](examples).
 
 ## Contribute
 
-Feel free to give me advice on design or implementation decicions or contribute your features yourself :D
+Feel free to give me advice on design or implementation decisions or contribute your features :D
 
 ## Licence
 

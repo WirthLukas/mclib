@@ -19,6 +19,7 @@
 
 #include <stddef.h> // NULL, size_t
 #include "params.h"
+#include "macros.h"
 
 #define dyn_array_t(T) T*
 #define DYN_ARRAY_DEFAULT_CAPACITY 4
@@ -36,7 +37,6 @@ void dyn_array_delete_one(void* ptr_to_array, size_t index);
 void dyn_array_delete_many(void* ptr_to_array, size_t index, int n);
 void dyn_array_delete(void* ptr_to_array);
 
-#include "macros.h"
 #define using_dyn_array(dyn_array) scope(dyn_array_delete(&dyn_array))
 
 typedef struct dyn_array_iterator {
@@ -54,8 +54,7 @@ void dyn_array_iterator_reset(dyn_array_iterator_t* iterator);
 // Created by lukew on 19.12.2022.
 //
 
-#include <string.h>
-#include <assert.h>
+#include <string.h>     // memcpy, memmove
 
 typedef struct dyn_array_header {
     size_t length;
@@ -132,8 +131,6 @@ void dyn_array_ensure_capacity(void* ptr_to_array, size_t add_length) {
     }
 }
 
-//#define dyn_array_add(arr, element) dyn_array_ensure_capacity((arr), 1); (*(arr))[dyn_array_header(*(arr))->length++] = (element);
-
 void dyn_array_add(void* ptr_to_array, void* value) {
     dyn_array_ensure_capacity(ptr_to_array, 1);
     dyn_array_header_t* header = dyn_array_header(*(void**)ptr_to_array);
@@ -148,6 +145,7 @@ void dyn_array_add(void* ptr_to_array, void* value) {
 }
 
 void dyn_array_add_many(void* ptr_to_array, params_data_t params) {
+    // it would also be possible to call dyn_array_add for each element of the params array
 //    for (int i = 0; i < params.length; i++) {
 //        dyn_array_add(arr, params.data + i * params.element_size);
 //    }
@@ -155,12 +153,20 @@ void dyn_array_add_many(void* ptr_to_array, params_data_t params) {
     dyn_array_ensure_capacity(ptr_to_array, params.length);
     dyn_array_header_t* header = dyn_array_header(*(void**)ptr_to_array);
 
-    for (size_t i = 0; i < params.length; i++, header->length++) {
-        memcpy(
-                *(void**)ptr_to_array + header->length * header->element_size,
-                params.data + i * params.element_size,
-                header->element_size);
-    }
+    // this loop copies each element of the params array at once. But it is possible to copy the whole array at once
+    // therefore the memcpy call below. This remains as comment to serve as a drawback if the below memcpy call leads to bugs
+//    for (size_t i = 0; i < params.length; i++, header->length++) {
+//        memcpy(
+//                *(void**)ptr_to_array + header->length * header->element_size,
+//                params.data + i * params.element_size,
+//                header->element_size);
+//    }
+
+    memcpy(
+            *(void**)ptr_to_array + header->length * header->element_size,
+            params.data,
+            header->element_size * params.length);
+    header->length += params.length;
 }
 
 void dyn_array_insert_one_at(void* ptr_to_array, size_t index, void* value) {
@@ -192,12 +198,17 @@ void dyn_array_insert_many_at(void* ptr_to_array, size_t index, params_data_t pa
             *(void**)ptr_to_array + index * header->element_size,
             header->element_size * (header->length - index));
 
-    for (size_t i = 0; i < params.length; i++) {
-        memcpy(
-                *(void**)ptr_to_array + (index + i) * header->element_size,
-                params.data + i * params.element_size,
-                header->element_size);
-    }
+//    for (size_t i = 0; i < params.length; i++) {
+//        memcpy(
+//                *(void**)ptr_to_array + (index + i) * header->element_size,
+//                params.data + i * params.element_size,
+//                header->element_size);
+//    }
+
+    memcpy(
+            *(void**)ptr_to_array + index * header->element_size,
+            params.data,
+            header->element_size * params.length);
 
     header->length += params.length;
 }
