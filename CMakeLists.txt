@@ -43,3 +43,10 @@ target_link_libraries(test_driver mclib)
 add_subdirectory(examples/santa_claus_inc)
 target_link_libraries(santa_claus_inc mclib)
 target_link_libraries(santa_claus_inc_test mclib)
+
+#===============================================================
+# Caravan Example Application
+#===============================================================
+
+add_subdirectory(examples/caravan)
+target_link_libraries(caravan mclib)

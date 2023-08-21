@@ -63,9 +63,9 @@ void main() {
 ```c
 const int cap = 300;
 void* memory = malloc(cap);
-allocator_t arena = allocator_new(cap, memory);
+arena_t arena = arena_new(cap, memory);
 
-person_t* p = allocator_get(&arena, sizeof(person_t) * 1);
+person_t* p = arena_alloc(&arena, sizeof(person_t) * 1);
 ```
 
 ### String Builder
@@ -119,12 +119,12 @@ using int* ptr = smart_alloc(sizeof(int), &dtor);
 
 const int cap = 300;
 void* memory = malloc(cap);
-allocator_t allocator = allocator_new(cap, memory);
+arena_t allocator = arena_new(cap, memory);
 
 // automatically calls allocator_delete and free after the source code inside scope has executed
 scope((allocator_delete(&allocator), free(memory))) {
     printf("String Builer\n=================\n");
-    string_builder_t* builder = string_builder_new(10, linear_allocator_allocation_strategy(&allocator));
+    string_builder_t* builder = string_builder_new(10, arena_allocation_strategy(&allocator));
     
     using_string_builder(builder) {
         string_builder_add_string(builder, "Hello ", 0);

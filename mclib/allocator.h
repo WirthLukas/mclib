@@ -13,6 +13,7 @@
 // https://github.com/thejefflarson/arena
 
 // https://www.gamedev.net/articles/programming/general-and-gameplay-programming/c-custom-memory-allocation-r3010/
+// http://dmitrysoshnikov.com/compilers/writing-a-pool-allocator/
 
 #include <stddef.h>
 
@@ -29,29 +30,72 @@ allocation_strategy_t malloc_allocation_strategy();
 #define allocation_strategy_free(path_to_allocation_strategy, free_ptr) (path_to_allocation_strategy).allocation_callback((path_to_allocation_strategy).allocator, 0, free_ptr)
 #define allocation_strategy_alloc_and_free(path_to_allocation_strategy, size, free_ptr) (path_to_allocation_strategy).allocator_callback((path_to_allocation_strategy).allocator, size, free_ptr)
 
-typedef struct allocator {
+typedef enum allocator_error {
+    NoError = 0, NotEnoughMemory, MemoryNullPointer
+} allocator_error_t;
+
+typedef struct arena {
     void* memory;
     size_t capacity;
     size_t memory_used;
-} allocator_t;
+    allocator_error_t error;
+} arena_t;
 
-//allocator_t allocator_new(size_t size, void* memory);
-void* allocator_get(allocator_t* allocator, size_t size);
-void allocator_clear(allocator_t* allocator);
-void allocator_delete(allocator_t* allocator);
+arena_t arena_new(void* memory, size_t size);
+void* arena_alloc(arena_t* allocator, size_t size);
+void arena_clear(arena_t* allocator);
 
-allocation_strategy_t linear_allocator_allocation_strategy(allocator_t* allocator);
+allocation_strategy_t arena_allocation_strategy(arena_t* allocator);
 
-#define allocator_new(size, given_memory) \
-    ((allocator_t) {                \
-        .memory = given_memory,           \
-        .capacity = size,           \
-        .memory_used = 0            \
-    })
+typedef struct proxy_allocator {
+    allocation_strategy_t strategy;
 
-#include "macros.h"
+    void* data;
+    void (* update)(void* data, int event);
+} proxy_allocator_t;
 
-#define using_linear_allocator(allocator) scope(allocator_delete(allocator))
+void* proxy_allocator_alloc(proxy_allocator_t* allocator, size_t size) {
+    void* data = allocation_strategy_allocate(allocator->strategy, size);
+    allocator->update(allocator->data, 0);
+    return data;
+}
+
+void proxy_allocator_clear(proxy_allocator_t* allocator) {
+    // TODO:
+}
+
+typedef struct allocator_ops {
+    void* (*alloc)(struct allocator_ops** self, size_t size);
+    void (*dealloc)(struct allocator_ops** self, void* ptr);
+} allocator_ops_t;
+
+typedef struct linear_allocator {
+    allocator_ops_t ops;
+    void* memory;
+} linear_allocator_t;
+
+#define container_of(ptr, type, member) ({                      \
+        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+        (type *)( (char *)__mptr - offsetof(type,member) );})
+
+void* __linear_allocator_alloc(allocator_ops_t** ops, size_t size) {
+    linear_allocator_t* self = container_of(*ops, linear_allocator_t, ops);
+    self->memory = NULL;
+}
+
+void linear_allocator_init(linear_allocator_t* self) {
+    *self = (linear_allocator_t) {
+            .ops = {
+                    .alloc = &__linear_allocator_alloc
+            },
+            .memory = NULL
+    };
+}
+
+void* linear_allocator_alloc(linear_allocator_t* self, size_t size) {
+    allocator_ops_t* ops = &self->ops;
+    return self->ops.alloc(&ops, size);
+}
 
 #ifdef MODERNC_ALLOCATOR_IMPLEMENTATION
 
@@ -60,11 +104,7 @@ void* malloc_allocation_callback(const void* _, size_t size, void* free_ptr) {
         free(free_ptr);
     }
 
-    if (size > 0) {
-        return malloc(size);
-    }
-
-    return NULL;
+    return size > 0 ? malloc(size) : NULL;
 }
 
 allocation_strategy_t malloc_allocation_strategy() {
@@ -75,37 +115,40 @@ allocation_strategy_t malloc_allocation_strategy() {
 }
 
 void* allocator_allocation_callback(const void* allocator, size_t size, void* free_ptr) {
-    if (size > 0) {
-        return allocator_get(((allocator_t*)allocator), size);
-    }
-
-    return NULL;
+        return arena_alloc(((arena_t *) allocator), size);
 }
 
-allocation_strategy_t linear_allocator_allocation_strategy(allocator_t* allocator) {
+allocation_strategy_t arena_allocation_strategy(arena_t* allocator) {
     return (allocation_strategy_t) {
             .allocator = allocator,
             .allocation_callback = &allocator_allocation_callback
     };
 }
 
-//allocator_t allocator_new(size_t size, void* memory) {
-//    if (memory == NULL || size <= 0) {
-//        //error
-//    }
-//
-//    allocator_t allocator = {
-//            .memory = memory,
-//            .capacity = size,
-//            .memory_used = 0
-//    };
-//
-//    return allocator;
-//}
+arena_t arena_new(void* memory, size_t size) {
+    return memory == NULL
+        ? (arena_t) { .error = MemoryNullPointer }
+        : (arena_t) {
+            memory = memory,
+            .capacity = size,
+            .memory_used = 0
+        };
+}
 
+void* arena_alloc(arena_t *allocator, size_t size) {
+    if (allocator == NULL) {
+        return NULL;
+    }
 
-void* allocator_get(allocator_t* allocator, size_t size) {
-    if (size <= 0 || allocator == NULL || allocator->memory_used + size > allocator->capacity) {
+    if (allocator->memory == NULL)
+    {
+        allocator->error = MemoryNullPointer;
+        return NULL;
+    }
+
+    if (allocator->memory_used + size > allocator->capacity)
+    {
+        allocator->error = NotEnoughMemory;
         return NULL;
     }
 
@@ -114,22 +157,8 @@ void* allocator_get(allocator_t* allocator, size_t size) {
     return ptr;
 }
 
-void allocator_clear(allocator_t* allocator) {
-//    allocator->start_of_free_mem = allocator->memory;
+void arena_clear(arena_t *allocator) {
     allocator->memory_used = 0;
-}
-
-void allocator_delete(allocator_t* allocator) {
-//    free(allocator->memory);
-//    allocation_callback->memory = NULL;
-//    allocation_callback->start_of_free_mem = NULL;
-//    allocation_callback->capacity = 0;
-//    *allocation_callback = (allocator_t){
-//            .memory = NULL,
-//            .capacity = 0,
-//            .start_of_free_mem = NULL
-//    };
-    *allocator = (allocator_t){ 0 };
 }
 
 #endif // MODERNC_ALLOCATOR_IMPLEMENTATION

@@ -185,12 +185,12 @@ int main() {
     const int cap = 300;
 //    using void* memory = smart_alloc(cap, NULL);
     void* memory = malloc(cap);
-    allocator_t allocator = allocator_new(cap, memory);
+    arena_t allocator = arena_new( memory, cap);
 
-    scope((allocator_delete(&allocator), free(memory))) {
+    scope(free(memory)) {
         printf("String Builer\n=================\n");
 //    string_builder_t* builder = string_builder_new(10, malloc_allocation_strategy());
-        string_builder_t* builder = string_builder_new(10, linear_allocator_allocation_strategy(&allocator));
+        string_builder_t* builder = string_builder_new(10, arena_allocation_strategy(&allocator));
 //    string_builder_t* builder = string_builder_new(10, (allocation_strategy_t) {
 //        .allocator = refof allocator,
 //        .allocation_callback = refof allocator_allocator
@@ -209,7 +209,7 @@ int main() {
     }
 
 //
-//    allocator_t arena = allocator_new(300);
+//    arena_t arena = arena_new(300);
 //
 ////    string_builder_t* builder = string_builder_new(10, (allocation_wrapper_t) {
 ////            .allocator = &arena,

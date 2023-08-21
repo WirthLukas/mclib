@@ -9,6 +9,7 @@
 #include "tour_plan.h"
 #include "../../mclib/utest.h"
 #include "../../mclib/dynarray.h"
+#include "../../mclib/macros.h"
 #include <string.h>
 
 typedef struct Dummy{
@@ -25,27 +26,17 @@ TEST(create_list)
 
 TEST(list_add_elements)
 {
-    Dummy* list = dyn_array_init(params(Dummy));
+    Dummy* list = dyn_array_init(params(Dummy, {1},{2}));
+    Dummy dummies[] = {{3}};
 
-    Dummy dummies[] = {
-            {1},
-            {2},
-            {3}
-    };
+    using_dyn_array(list) {
+        dyn_array_add(refof list, refof dummies[0]);
 
-    dyn_array_add((void **) &list, &dummies[0]);
-    dyn_array_add((void **) &list, &dummies[1]);
-    dyn_array_add((void **) &list, &dummies[2]);
-    Dummy first_dummy = list[0];
-    Dummy second_dummy = list[1];
-    Dummy third_dummy = list[2];
-
-    ASSERT_EQUALS_DECIMAL(1, first_dummy.val, "");
-    ASSERT_EQUALS_DECIMAL(2, second_dummy.val, "");
-    ASSERT_EQUALS_DECIMAL(3, third_dummy.val, "");
-    ASSERT_TRUE(dyn_array_length(list) == 3, "Last node has a null pointer as next");
-
-    dyn_array_delete((void **) &list);
+        ASSERT_EQUALS_DECIMAL(1, list[0].val, "");
+        ASSERT_EQUALS_DECIMAL(2, list[1].val, "");
+        ASSERT_EQUALS_DECIMAL(3, list[2].val, "");
+        ASSERT_TRUE(dyn_array_length(list) == 3, "Last node has a null pointer as next");
+    }
 }
 
 TEST(list_add_element_after)
